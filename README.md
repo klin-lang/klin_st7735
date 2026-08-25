@@ -87,43 +87,25 @@ klin test klin_st7735
 klin run -I. examples/host_smoke.kl
 ```
 
-## Next: G-176 + STM32F411CE Black Pill
+## G-176 + STM32F411CE Black Pill
 
-A board example is a **later** package (or example tree), not this chip
-driver.
+Arduino + Klin sketches, wiring, and shop links:
+
+[`examples/g176_blackpill/`](examples/g176_blackpill/) — Elektroweb
+[G-176](https://elektroweb.pl/pl/wyswietlacze-lcd/535-wyswietlacz-lcd-tft-18-spi-st7735s-z-czytnikiem-kart-sd.html)
+(1.8" ST7735S + SD) and
+[J-094](https://elektroweb.pl/pl/stm32/778-mikrokontroler-stm32f411ceu6-stm32-blackpill.html)
+(WeAct Black Pill F411CE).
 
 | Piece | Status |
 |---|---|
 | ST7735S protocol | this package |
-| STM32F411 SPI / GPIO | [`machine_stm32`](https://github.com/klin-lang/machine_stm32) `@v0.5.0` — **no compiler change** |
+| STM32F411 SPI / GPIO | [`machine_stm32`](https://github.com/klin-lang/machine_stm32) `@v0.5.0` |
 | Nucleo-F411RE scaffold | `klin init nucleo-f411` + [`nucleo_f411re`](https://github.com/klin-lang/nucleo_f411re) |
-| WeAct Black Pill F411CE | **not** a Klin board pack yet (LED PC13, KEY PA0, HSE 25 MHz, USB-C) |
+| WeAct Black Pill F411CE | **no** board pack yet (LED PC13, KEY PA0, HSE 25 MHz, USB-C) |
 
-F411CE and F411RE are the same F411-class MMIO. `machine_stm32` already
-talks SPI1/SPI2. What the Black Pill still needs is a **board pack**
-(pins, clock if you want 100 MHz from the 25 MHz crystal, flash via
-SWD/DFU). For a first bring-up, HSI 16 MHz after reset is enough —
-same as the Nucleo examples.
-
-Suggested wiring (SPI1, so `SD_CS` is not MOSI):
-
-| G-176 | Black Pill F411CE |
-|---|---|
-| VCC | 3V3 (module is 3.3–5 V; backlight LED wants 3.3 V) |
-| GND | GND |
-| LED | 3V3 (or a GPIO later) |
-| SCK / CLK | PA5 (SPI1 SCK, AF5) |
-| SDA | PA7 (SPI1 MOSI, AF5) |
-| A0 / RS / DC | PB0 |
-| RESET | PB1 |
-| CS | PA4 or PB12 |
-| SD_CS | PB15 (later; keep HIGH while talking to the TFT) |
-| SD_MISO | PA6 (SPI1 MISO) |
-
-Do **not** put TFT MOSI and `SD_CS` on PB15 at once (SPI2 MOSI is
-PB15). Shared SPI + two chip-selects, both idle HIGH.
-
-SD / FatFs is a separate package. This driver does not touch the slot.
+Use **SPI1** (PA5/PA6/PA7). Do not put `SD_CS` on PB15 if you also use
+SPI2 MOSI. Both CS lines idle HIGH. SD / FatFs is a later package.
 
 ## Layout
 

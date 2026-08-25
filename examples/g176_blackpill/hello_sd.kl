@@ -1,0 +1,22 @@
+/// G-176 + Black Pill — same job as hello_sd.ino.
+/// Bus / Wire live in wire.kl (Arduino hides that in Adafruit_ST7735).
+module app
+import "github/klin-lang/machine_stm32" machine
+import klin_st7735 lcd
+
+@[link("startup.s")]
+fn main() {
+    let mut bus = bus_spi1()
+    let sd_cs = machine.pin_out(machine.Port.B, 15)
+    bus.cs.high()
+    sd_cs.high()
+
+    let tft = attach_tft(&bus)
+    tft.fill(lcd.color_black())
+
+    let hello: [10]i32 = [72, 101, 108, 108, 111, 44, 32, 83, 68, 33]
+    tft.draw_text(0, 0, hello[:], lcd.color_white(), lcd.color_black())
+
+    while true {
+    }
+}
