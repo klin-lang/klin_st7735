@@ -1,0 +1,81 @@
+/// STM32 SPI1 + GPIO adapter for klin_st7735 `Wire`.
+/// Same cost as Adafruit_ST7735 internals — just not hidden in a C++ class.
+module app
+import "github/klin-lang/machine_stm32" machine
+import klin_st7735 lcd
+
+struct Bus {
+    spi: machine.Spi
+    cs: machine.Pin
+    dc: machine.Pin
+    rst: machine.Pin
+}
+
+fn busy_ms(ms: i32) {
+    let mut n = ms * 4000
+    while n > 0 {
+        n = n - 1
+    }
+}
+
+fn spi_byte(bus: *mut Bus, b: i32) {
+    let s = (*bus).spi
+    s.write_read_u8(b)
+}
+
+fn tft_cmd(ctx: *mut u8, b: i32) {
+    let bus = cast(*mut Bus, ctx)
+    (*bus).dc.low()
+    (*bus).cs.low()
+    spi_byte(bus, b)
+    (*bus).cs.high()
+}
+
+fn tft_data(ctx: *mut u8, b: i32) {
+    let bus = cast(*mut Bus, ctx)
+    (*bus).dc.high()
+    (*bus).cs.low()
+    spi_byte(bus, b)
+    (*bus).cs.high()
+}
+
+fn tft_delay(ctx: *mut u8, ms: i32) {
+    busy_ms(ms)
+}
+
+fn tft_rst(ctx: *mut u8) {
+    let bus = cast(*mut Bus, ctx)
+    (*bus).rst.high()
+    busy_ms(10)
+    (*bus).rst.low()
+    busy_ms(10)
+    (*bus).rst.high()
+    busy_ms(120)
+}
+
+fn bus_spi1(): Bus {
+    return Bus{
+        spi: machine.spi_out(
+            1,
+            machine.Port.A, 5, 5,
+            machine.Port.A, 6, 5,
+            machine.Port.A, 7, 5,
+            16000000,
+            8000000,
+            0
+        ),
+        cs: machine.pin_out(machine.Port.B, 12),
+        dc: machine.pin_out(machine.Port.B, 0),
+        rst: machine.pin_out(machine.Port.B, 1)
+    }
+}
+
+fn attach_tft(bus: *mut Bus): lcd.Lcd {
+    return lcd.attach(lcd.Wire{
+        ctx: cast(*mut u8, bus),
+        cmd: tft_cmd,
+        data: tft_data,
+        delay_ms: tft_delay,
+        rst: tft_rst
+    }, lcd.Tab.black)
+}
