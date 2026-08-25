@@ -53,7 +53,7 @@ fn mock_wire(rec: *mut Rec): Wire {
 }
 
 fn test_version() {
-    testing.assert_eq_i32(version(), 1)
+    testing.assert_eq_i32(version(), 2)
 }
 
 fn test_colors() {
@@ -133,4 +133,52 @@ fn test_fill_rect_one() {
     testing.assert_eq_i32(rec.ndata, 2 + 4 + 4)
     testing.assert_eq_i32(rec.last0, 0x00)
     testing.assert_eq_i32(rec.last1, 0x1F)
+}
+
+fn test_geom_rotated() {
+    let r0 = geom_rotated(Tab.black, 0)
+    testing.assert_eq_i32(r0.width, 128)
+    testing.assert_eq_i32(r0.height, 160)
+    testing.assert_eq_i32(r0.madctl, 0xC8)
+    let r1 = geom_rotated(Tab.black, 1)
+    testing.assert_eq_i32(r1.width, 160)
+    testing.assert_eq_i32(r1.height, 128)
+    testing.assert_eq_i32(r1.madctl, 0xA8)
+    testing.assert_eq_i32(madctl_black(2), 0x08)
+    testing.assert_eq_i32(madctl_black(3), 0x68)
+}
+
+fn test_set_rotation() {
+    let mut rec = Rec{ cmds: [0, 0, 0, 0, 0, 0, 0, 0], ncmd: 0, data: [0, 0, 0, 0, 0, 0, 0, 0], ndata: 0, last0: 0, last1: 0, delays: 0, rsts: 0 }
+    let mut lcd = attach(mock_wire(&rec), Tab.black)
+    rec_clear(&rec)
+    lcd.set_rotation(1)
+    testing.assert_eq_i32(lcd.geom.width, 160)
+    testing.assert_eq_i32(lcd.geom.height, 128)
+    testing.assert_eq_i32(rec.cmds[0], cmd_madctl())
+    testing.assert_eq_i32(rec.last1, 0xA8)
+}
+
+fn test_invert_sleep_display() {
+    let mut rec = Rec{ cmds: [0, 0, 0, 0, 0, 0, 0, 0], ncmd: 0, data: [0, 0, 0, 0, 0, 0, 0, 0], ndata: 0, last0: 0, last1: 0, delays: 0, rsts: 0 }
+    let lcd = attach(mock_wire(&rec), Tab.black)
+    rec_clear(&rec)
+    lcd.invert(true)
+    lcd.invert(false)
+    lcd.display(false)
+    lcd.display(true)
+    lcd.sleep(true)
+    testing.assert_eq_i32(rec.cmds[0], cmd_invon())
+    testing.assert_eq_i32(rec.cmds[1], cmd_invoff())
+    testing.assert_eq_i32(rec.cmds[2], cmd_dispoff())
+    testing.assert_eq_i32(rec.cmds[3], cmd_dispon())
+    testing.assert_eq_i32(rec.cmds[4], cmd_slpin())
+}
+
+fn test_font_metrics() {
+    testing.assert_eq_i32(font_char_w(), 6)
+    testing.assert_eq_i32(font_char_h(), 8)
+    testing.assert_eq_i32(font5x7_col(32, 0), 0)
+    testing.assert(font5x7_col(48, 0) != 0)
+    testing.assert(font5x7_col(65, 0) != 0)
 }

@@ -16,26 +16,28 @@ ST7735S modules with an SD slot (e.g. Elektroweb G-176).
 ## Install
 
 ```sh
-klin get github/klin-lang/klin_st7735@v0.1.0
+klin get github/klin-lang/klin_st7735@v0.2.0
 ```
 
 Repo: https://github.com/klin-lang/klin_st7735  
 Local use: `-I` this tree or a sibling `klin_st7735/`.
 
-## API (`@v0.1.0`)
+## API (`@v0.2.0`)
 
 | Symbol | Meaning |
 |---|---|
-| `version(): i32` | `1` at `v0.1.0` |
+| `version(): i32` | `2` at `v0.2.0` |
 | `Tab.black` | 128×160, origin 0, MADCTL `0xC8` (MX\|MY\|BGR) |
-| `geom_for(tab)` | width / height / window offsets / MADCTL |
+| `geom_for(tab)` / `geom_rotated(tab, rot)` | width / height / offsets / MADCTL |
 | `rgb565` / `color_*` | RGB565, high byte first on the wire (Adafruit order) |
 | `Wire` | `cmd` / `data` / `delay_ms` / `rst` + `ctx` (no capture) |
 | `attach(wire, tab)` | hardware reset + init |
 | `fill` / `fill_rect` / `pixel` / `hline` / `vline` | clip to the panel |
+| `set_rotation(0..3)` | MADCTL + swap 128×160 ↔ 160×128 |
+| `invert` / `sleep` / `display` | chip commands (no hidden state) |
+| `draw_char` / `draw_text` / `draw_text_n` | 5×7 font; `[]i32` ASCII |
 
-No font, no sprites, no SD, no DMA, no heap. A later tag can add a
-bulk-write hook; today `fill` is one RGB565 word per pixel.
+No sprites, no SD, no DMA, no heap. `fill` is one RGB565 word per pixel.
 
 ### Wire
 
