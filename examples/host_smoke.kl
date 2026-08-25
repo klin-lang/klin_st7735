@@ -7,4 +7,5 @@ fn main() {
     printf("rot1 %dx%d\n", lcd.geom_rotated(lcd.Tab.black, 1).width, lcd.geom_rotated(lcd.Tab.black, 1).height)
     printf("red %d\n", lcd.color_red())
     printf("font %dx%d\n", lcd.font_char_w(), lcd.font_char_h())
+    printf("rclamp %d\n", lcd.clamp_radius(20, 10, 100))
 }

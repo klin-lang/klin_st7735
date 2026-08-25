@@ -336,6 +336,80 @@ pub fn (lcd: Lcd) vline(x: i32, y: i32, h: i32, color: i32) {
     lcd.fill_rect(x, y, 1, h, color)
 }
 
+/// 1 px outline. Interior is untouched.
+pub fn (lcd: Lcd) draw_rect(x: i32, y: i32, w: i32, h: i32, color: i32) {
+    lcd.draw_rect_border(x, y, w, h, 1, color)
+}
+
+/// Frame of thickness `t`. `t <= 0` is a no-op. If `t` fills the box, solid `fill_rect`.
+pub fn (lcd: Lcd) draw_rect_border(x: i32, y: i32, w: i32, h: i32, t: i32, color: i32) {
+    if t <= 0 {
+        return
+    }
+    if w <= 0 {
+        return
+    }
+    if h <= 0 {
+        return
+    }
+    if t + t >= w {
+        lcd.fill_rect(x, y, w, h, color)
+        return
+    }
+    if t + t >= h {
+        lcd.fill_rect(x, y, w, h, color)
+        return
+    }
+    lcd.fill_rect(x, y, w, t, color)
+    lcd.fill_rect(x, y + h - t, w, t, color)
+    lcd.fill_rect(x, y + t, t, h - t - t, color)
+    lcd.fill_rect(x + w - t, y + t, t, h - t - t, color)
+}
+
+/// Filled axis-aligned box with circular corners. `r <= 0` → `fill_rect`.
+pub fn (lcd: Lcd) fill_round_rect(x: i32, y: i32, w: i32, h: i32, r: i32, color: i32) {
+    let rr = clamp_radius(w, h, r)
+    if rr <= 0 {
+        lcd.fill_rect(x, y, w, h, color)
+        return
+    }
+    lcd.fill_rect(x, y + rr, w, h - rr - rr, color)
+    let mut i: i32 = 0
+    while i < rr {
+        let dx = circle_dx(rr, rr - i)
+        let ww = w - (rr - dx) - (rr - dx)
+        lcd.fill_rect(x + rr - dx, y + i, ww, 1, color)
+        lcd.fill_rect(x + rr - dx, y + h - 1 - i, ww, 1, color)
+        i = i + 1
+    }
+}
+
+/// 1 px rounded outline. Interior is untouched. `r <= 0` → `draw_rect`.
+pub fn (lcd: Lcd) draw_round_rect(x: i32, y: i32, w: i32, h: i32, r: i32, color: i32) {
+    let rr = clamp_radius(w, h, r)
+    if rr <= 0 {
+        lcd.draw_rect(x, y, w, h, color)
+        return
+    }
+    lcd.hline(x + rr, y, w - rr - rr, color)
+    lcd.hline(x + rr, y + h - 1, w - rr - rr, color)
+    lcd.vline(x, y + rr, h - rr - rr, color)
+    lcd.vline(x + w - 1, y + rr, h - rr - rr, color)
+    let mut i: i32 = 0
+    while i <= rr {
+        let dx = circle_dx(rr, i)
+        lcd.pixel(x + rr - dx, y + rr - i, color)
+        lcd.pixel(x + rr - i, y + rr - dx, color)
+        lcd.pixel(x + w - 1 - rr + dx, y + rr - i, color)
+        lcd.pixel(x + w - 1 - rr + i, y + rr - dx, color)
+        lcd.pixel(x + rr - dx, y + h - 1 - rr + i, color)
+        lcd.pixel(x + rr - i, y + h - 1 - rr + dx, color)
+        lcd.pixel(x + w - 1 - rr + dx, y + h - 1 - rr + i, color)
+        lcd.pixel(x + w - 1 - rr + i, y + h - 1 - rr + dx, color)
+        i = i + 1
+    }
+}
+
 /// Draw one 5×7 glyph at `(x,y)`. Cell is 6×8 (1 px gap). `ch` = ASCII code.
 pub fn (lcd: Lcd) draw_char(x: i32, y: i32, ch: i32, fg: i32, bg: i32) {
     let mut col: i32 = 0
