@@ -1,0 +1,136 @@
+module klin_st7735
+import testing
+
+// Host-safe checks only (no MMIO). Skipped on package import (*_test.kl).
+struct Rec {
+    cmds: [8]i32
+    ncmd: i32
+    data: [8]i32
+    ndata: i32
+    last0: i32
+    last1: i32
+    delays: i32
+    rsts: i32
+}
+
+fn rec_cmd(ctx: *mut u8, c: i32) {
+    let r = cast(*mut Rec, ctx)
+    if (*r).ncmd < 8 {
+        (*r).cmds[(*r).ncmd] = c
+    }
+    (*r).ncmd = (*r).ncmd + 1
+}
+
+fn rec_data(ctx: *mut u8, v: i32) {
+    let r = cast(*mut Rec, ctx)
+    if (*r).ndata < 8 {
+        (*r).data[(*r).ndata] = v
+    }
+    (*r).last0 = (*r).last1
+    (*r).last1 = v
+    (*r).ndata = (*r).ndata + 1
+}
+
+fn rec_delay(ctx: *mut u8, ms: i32) {
+    let r = cast(*mut Rec, ctx)
+    (*r).delays = (*r).delays + ms
+}
+
+fn rec_rst(ctx: *mut u8) {
+    let r = cast(*mut Rec, ctx)
+    (*r).rsts = (*r).rsts + 1
+}
+
+fn rec_clear(r: *mut Rec) {
+    (*r).ncmd = 0
+    (*r).ndata = 0
+    (*r).delays = 0
+    (*r).rsts = 0
+}
+
+fn mock_wire(rec: *mut Rec): Wire {
+    return Wire{ ctx: cast(*mut u8, rec), cmd: rec_cmd, data: rec_data, delay_ms: rec_delay, rst: rec_rst }
+}
+
+fn test_version() {
+    testing.assert_eq_i32(version(), 1)
+}
+
+fn test_colors() {
+    testing.assert_eq_i32(color_black(), 0)
+    testing.assert_eq_i32(color_white(), 0xFFFF)
+    testing.assert_eq_i32(color_red(), 0xF800)
+    testing.assert_eq_i32(color_green(), 0x07E0)
+    testing.assert_eq_i32(color_blue(), 0x001F)
+    testing.assert_eq_i32(rgb565(255, 0, 0), 0xF800)
+    testing.assert_eq_i32(rgb565(0, 255, 0), 0x07E0)
+    testing.assert_eq_i32(rgb565(0, 0, 255), 0x001F)
+}
+
+fn test_geom_black() {
+    let g = geom_for(Tab.black)
+    testing.assert_eq_i32(g.width, 128)
+    testing.assert_eq_i32(g.height, 160)
+    testing.assert_eq_i32(g.x0, 0)
+    testing.assert_eq_i32(g.y0, 0)
+    testing.assert_eq_i32(g.madctl, 0xC8)
+}
+
+fn test_clip_rect() {
+    let ok = clip_rect(10, 20, 4, 5, 128, 160)
+    testing.assert_eq_i32(ok.x, 10)
+    testing.assert_eq_i32(ok.y, 20)
+    testing.assert_eq_i32(ok.w, 4)
+    testing.assert_eq_i32(ok.h, 5)
+    let left = clip_rect(-2, 0, 5, 1, 128, 160)
+    testing.assert_eq_i32(left.x, 0)
+    testing.assert_eq_i32(left.w, 3)
+    let miss = clip_rect(200, 0, 10, 10, 128, 160)
+    testing.assert_eq_i32(miss.w, 0)
+}
+
+fn test_init_black() {
+    let mut rec = Rec{ cmds: [0, 0, 0, 0, 0, 0, 0, 0], ncmd: 0, data: [0, 0, 0, 0, 0, 0, 0, 0], ndata: 0, last0: 0, last1: 0, delays: 0, rsts: 0 }
+    let lcd = attach(mock_wire(&rec), Tab.black)
+    testing.assert_eq_i32(lcd.geom.width, 128)
+    testing.assert_eq_i32(rec.rsts, 1)
+    testing.assert_eq_i32(rec.cmds[0], cmd_swreset())
+    testing.assert_eq_i32(rec.cmds[1], cmd_slpout())
+    testing.assert(rec.ncmd > 8)
+    testing.assert(rec.delays >= 150 + 500 + 10 + 100)
+}
+
+fn test_pixel_rgb565() {
+    let mut rec = Rec{ cmds: [0, 0, 0, 0, 0, 0, 0, 0], ncmd: 0, data: [0, 0, 0, 0, 0, 0, 0, 0], ndata: 0, last0: 0, last1: 0, delays: 0, rsts: 0 }
+    let lcd = attach(mock_wire(&rec), Tab.black)
+    rec_clear(&rec)
+    lcd.pixel(0, 0, color_red())
+    testing.assert_eq_i32(rec.cmds[0], cmd_caset())
+    testing.assert_eq_i32(rec.cmds[1], cmd_raset())
+    testing.assert_eq_i32(rec.cmds[2], cmd_ramwr())
+    testing.assert_eq_i32(rec.ndata, 2 + 4 + 4)
+    testing.assert_eq_i32(rec.last0, 0xF8)
+    testing.assert_eq_i32(rec.last1, 0x00)
+}
+
+fn test_pixel_clip() {
+    let mut rec = Rec{ cmds: [0, 0, 0, 0, 0, 0, 0, 0], ncmd: 0, data: [0, 0, 0, 0, 0, 0, 0, 0], ndata: 0, last0: 0, last1: 0, delays: 0, rsts: 0 }
+    let lcd = attach(mock_wire(&rec), Tab.black)
+    rec_clear(&rec)
+    lcd.pixel(-1, 0, color_white())
+    lcd.pixel(128, 0, color_white())
+    testing.assert_eq_i32(rec.ncmd, 0)
+    testing.assert_eq_i32(rec.ndata, 0)
+}
+
+fn test_fill_rect_one() {
+    let mut rec = Rec{ cmds: [0, 0, 0, 0, 0, 0, 0, 0], ncmd: 0, data: [0, 0, 0, 0, 0, 0, 0, 0], ndata: 0, last0: 0, last1: 0, delays: 0, rsts: 0 }
+    let lcd = attach(mock_wire(&rec), Tab.black)
+    rec_clear(&rec)
+    lcd.fill_rect(3, 4, 1, 1, color_blue())
+    testing.assert_eq_i32(rec.cmds[0], cmd_caset())
+    testing.assert_eq_i32(rec.ncmd, 3)
+    testing.assert_eq_i32(rec.ndata, 2 + 4 + 4)
+    testing.assert_eq_i32(rec.last0, 0x00)
+    testing.assert_eq_i32(rec.last1, 0x1F)
+}

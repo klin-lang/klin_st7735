@@ -1,0 +1,291 @@
+/// ST7735S 4-wire SPI chip driver. No MCU types — the app supplies `Wire`.
+/// Not Adafruit GFX / Arduino. No heap, no framebuffer, no SD.
+module klin_st7735
+
+pub fn cmd_swreset(): i32 {
+    return 0x01
+}
+
+pub fn cmd_slpout(): i32 {
+    return 0x11
+}
+
+pub fn cmd_noron(): i32 {
+    return 0x13
+}
+
+pub fn cmd_invoff(): i32 {
+    return 0x20
+}
+
+pub fn cmd_dispon(): i32 {
+    return 0x29
+}
+
+pub fn cmd_caset(): i32 {
+    return 0x2A
+}
+
+pub fn cmd_raset(): i32 {
+    return 0x2B
+}
+
+pub fn cmd_ramwr(): i32 {
+    return 0x2C
+}
+
+pub fn cmd_madctl(): i32 {
+    return 0x36
+}
+
+fn cmd_colmod(): i32 {
+    return 0x3A
+}
+
+fn cmd_frmctr1(): i32 {
+    return 0xB1
+}
+
+fn cmd_frmctr2(): i32 {
+    return 0xB2
+}
+
+fn cmd_frmctr3(): i32 {
+    return 0xB3
+}
+
+fn cmd_invctr(): i32 {
+    return 0xB4
+}
+
+fn cmd_pwctr1(): i32 {
+    return 0xC0
+}
+
+fn cmd_pwctr2(): i32 {
+    return 0xC1
+}
+
+fn cmd_pwctr3(): i32 {
+    return 0xC2
+}
+
+fn cmd_pwctr4(): i32 {
+    return 0xC3
+}
+
+fn cmd_pwctr5(): i32 {
+    return 0xC4
+}
+
+fn cmd_vmctr1(): i32 {
+    return 0xC5
+}
+
+fn cmd_gmctrp1(): i32 {
+    return 0xE0
+}
+
+fn cmd_gmctrn1(): i32 {
+    return 0xE1
+}
+
+/// Explicit SPI + GPIO hooks. Function pointers, no capture.
+/// `cmd` / `data` send one byte (DC low / high). `rst` is the hardware reset pulse.
+pub struct Wire {
+    ctx: *mut u8
+    cmd: fn(*mut u8,i32):void
+    data: fn(*mut u8,i32):void
+    delay_ms: fn(*mut u8,i32):void
+    rst: fn(*mut u8):void
+}
+
+pub struct Lcd {
+    wire: Wire
+    geom: Geom
+}
+
+fn cmd(lcd: Lcd, c: i32) {
+    let f = lcd.wire.cmd
+    f(lcd.wire.ctx, c)
+}
+
+fn data_u8(lcd: Lcd, v: i32) {
+    let f = lcd.wire.data
+    f(lcd.wire.ctx, v & 255)
+}
+
+fn delay_ms(lcd: Lcd, ms: i32) {
+    let f = lcd.wire.delay_ms
+    f(lcd.wire.ctx, ms)
+}
+
+fn write_color(lcd: Lcd, color: i32) {
+    data_u8(lcd, (color >> 8) & 255)
+    data_u8(lcd, color & 255)
+}
+
+fn write_u16(lcd: Lcd, v: i32) {
+    data_u8(lcd, (v >> 8) & 255)
+    data_u8(lcd, v & 255)
+}
+
+/// Hardware reset + Adafruit-style `INITR_BLACKTAB` command list (1.8" 128×160).
+fn lcd_init(lcd: Lcd) {
+    let pulse = lcd.wire.rst
+    pulse(lcd.wire.ctx)
+    cmd(lcd, cmd_swreset())
+    delay_ms(lcd, 150)
+    cmd(lcd, cmd_slpout())
+    delay_ms(lcd, 500)
+    cmd(lcd, cmd_frmctr1())
+    data_u8(lcd, 0x01)
+    data_u8(lcd, 0x2C)
+    data_u8(lcd, 0x2D)
+    cmd(lcd, cmd_frmctr2())
+    data_u8(lcd, 0x01)
+    data_u8(lcd, 0x2C)
+    data_u8(lcd, 0x2D)
+    cmd(lcd, cmd_frmctr3())
+    data_u8(lcd, 0x01)
+    data_u8(lcd, 0x2C)
+    data_u8(lcd, 0x2D)
+    data_u8(lcd, 0x01)
+    data_u8(lcd, 0x2C)
+    data_u8(lcd, 0x2D)
+    cmd(lcd, cmd_invctr())
+    data_u8(lcd, 0x07)
+    cmd(lcd, cmd_pwctr1())
+    data_u8(lcd, 0xA2)
+    data_u8(lcd, 0x02)
+    data_u8(lcd, 0x84)
+    cmd(lcd, cmd_pwctr2())
+    data_u8(lcd, 0xC5)
+    cmd(lcd, cmd_pwctr3())
+    data_u8(lcd, 0x0A)
+    data_u8(lcd, 0x00)
+    cmd(lcd, cmd_pwctr4())
+    data_u8(lcd, 0x8A)
+    data_u8(lcd, 0x2A)
+    cmd(lcd, cmd_pwctr5())
+    data_u8(lcd, 0x8A)
+    data_u8(lcd, 0xEE)
+    cmd(lcd, cmd_vmctr1())
+    data_u8(lcd, 0x0E)
+    cmd(lcd, cmd_invoff())
+    cmd(lcd, cmd_madctl())
+    data_u8(lcd, lcd.geom.madctl)
+    cmd(lcd, cmd_colmod())
+    data_u8(lcd, 0x05)
+    cmd(lcd, cmd_caset())
+    write_u16(lcd, 0)
+    write_u16(lcd, lcd.geom.width - 1)
+    cmd(lcd, cmd_raset())
+    write_u16(lcd, 0)
+    write_u16(lcd, lcd.geom.height - 1)
+    cmd(lcd, cmd_gmctrp1())
+    data_u8(lcd, 0x02)
+    data_u8(lcd, 0x1C)
+    data_u8(lcd, 0x07)
+    data_u8(lcd, 0x12)
+    data_u8(lcd, 0x37)
+    data_u8(lcd, 0x32)
+    data_u8(lcd, 0x29)
+    data_u8(lcd, 0x2D)
+    data_u8(lcd, 0x29)
+    data_u8(lcd, 0x25)
+    data_u8(lcd, 0x2B)
+    data_u8(lcd, 0x39)
+    data_u8(lcd, 0x00)
+    data_u8(lcd, 0x01)
+    data_u8(lcd, 0x03)
+    data_u8(lcd, 0x10)
+    cmd(lcd, cmd_gmctrn1())
+    data_u8(lcd, 0x03)
+    data_u8(lcd, 0x1D)
+    data_u8(lcd, 0x07)
+    data_u8(lcd, 0x06)
+    data_u8(lcd, 0x2E)
+    data_u8(lcd, 0x2C)
+    data_u8(lcd, 0x29)
+    data_u8(lcd, 0x2D)
+    data_u8(lcd, 0x2E)
+    data_u8(lcd, 0x2E)
+    data_u8(lcd, 0x37)
+    data_u8(lcd, 0x3F)
+    data_u8(lcd, 0x00)
+    data_u8(lcd, 0x00)
+    data_u8(lcd, 0x02)
+    data_u8(lcd, 0x10)
+    cmd(lcd, cmd_noron())
+    delay_ms(lcd, 10)
+    cmd(lcd, cmd_dispon())
+    delay_ms(lcd, 100)
+}
+
+/// Bind a wire and run tab init. Caller owns SPI / CS / DC / RST.
+pub fn attach(wire: Wire, tab: Tab): Lcd {
+    let lcd = Lcd{ wire: wire, geom: geom_for(tab) }
+    lcd_init(lcd)
+    return lcd
+}
+
+pub fn (lcd: Lcd) set_window(x0: i32, y0: i32, x1: i32, y1: i32) {
+    let xs = x0 + lcd.geom.x0
+    let xe = x1 + lcd.geom.x0
+    let ys = y0 + lcd.geom.y0
+    let ye = y1 + lcd.geom.y0
+    cmd(lcd, cmd_caset())
+    write_u16(lcd, xs)
+    write_u16(lcd, xe)
+    cmd(lcd, cmd_raset())
+    write_u16(lcd, ys)
+    write_u16(lcd, ye)
+    cmd(lcd, cmd_ramwr())
+}
+
+pub fn (lcd: Lcd) fill(color: i32) {
+    lcd.fill_rect(0, 0, lcd.geom.width, lcd.geom.height, color)
+}
+
+pub fn (lcd: Lcd) fill_rect(x: i32, y: i32, w: i32, h: i32, color: i32) {
+    let r = clip_rect(x, y, w, h, lcd.geom.width, lcd.geom.height)
+    if r.w <= 0 {
+        return
+    }
+    if r.h <= 0 {
+        return
+    }
+    lcd.set_window(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1)
+    let n = r.w * r.h
+    let mut i: i32 = 0
+    while i < n {
+        write_color(lcd, color)
+        i = i + 1
+    }
+}
+
+pub fn (lcd: Lcd) pixel(x: i32, y: i32, color: i32) {
+    if x < 0 {
+        return
+    }
+    if y < 0 {
+        return
+    }
+    if x >= lcd.geom.width {
+        return
+    }
+    if y >= lcd.geom.height {
+        return
+    }
+    lcd.set_window(x, y, x, y)
+    write_color(lcd, color)
+}
+
+pub fn (lcd: Lcd) hline(x: i32, y: i32, w: i32, color: i32) {
+    lcd.fill_rect(x, y, w, 1, color)
+}
+
+pub fn (lcd: Lcd) vline(x: i32, y: i32, h: i32, color: i32) {
+    lcd.fill_rect(x, y, 1, h, color)
+}

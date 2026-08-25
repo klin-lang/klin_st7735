@@ -1,0 +1,8 @@
+module app
+import klin_st7735 lcd
+
+fn main() {
+    printf("klin_st7735 %d\n", lcd.version())
+    printf("blacktab %dx%d\n", lcd.geom_for(lcd.Tab.black).width, lcd.geom_for(lcd.Tab.black).height)
+    printf("red %d\n", lcd.color_red())
+}

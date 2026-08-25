@@ -1,0 +1,63 @@
+module klin_st7735
+
+/// Panel / tab variant. Offsets stay caller-visible — not inferred from silicon.
+pub enum Tab {
+    /// 128×160, Adafruit `INITR_BLACKTAB`. Cheap 1.8" ST7735S + SD modules (G-176).
+    black
+}
+
+pub struct Geom {
+    width: i32
+    height: i32
+    x0: i32
+    y0: i32
+    madctl: i32
+}
+
+pub struct Rect {
+    x: i32
+    y: i32
+    w: i32
+    h: i32
+}
+
+/// Geometry for a tab. `Tab.black`: 128×160, origin 0, MADCTL `0xC8` (MX|MY|BGR).
+pub fn geom_for(tab: Tab): Geom {
+    match tab {
+        Tab.black {
+            return Geom{ width: 128, height: 160, x0: 0, y0: 0, madctl: 0xC8 }
+        }
+        else {
+            return Geom{ width: 128, height: 160, x0: 0, y0: 0, madctl: 0xC8 }
+        }
+    }
+}
+
+/// Clip a rectangle to `[0, width) × [0, height)`. Empty → `w == 0` or `h == 0`.
+pub fn clip_rect(x: i32, y: i32, w: i32, h: i32, width: i32, height: i32): Rect {
+    let mut xx = x
+    let mut yy = y
+    let mut ww = w
+    let mut hh = h
+    if xx < 0 {
+        ww = ww + xx
+        xx = 0
+    }
+    if yy < 0 {
+        hh = hh + yy
+        yy = 0
+    }
+    if xx + ww > width {
+        ww = width - xx
+    }
+    if yy + hh > height {
+        hh = height - yy
+    }
+    if ww < 0 {
+        ww = 0
+    }
+    if hh < 0 {
+        hh = 0
+    }
+    return Rect{ x: xx, y: yy, w: ww, h: hh }
+}

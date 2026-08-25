@@ -1,0 +1,38 @@
+module klin_st7735
+
+/// Pack 8-bit RGB into RGB565 (Adafruit / ST77xx wire order: high byte first).
+pub fn rgb565(r: i32, g: i32, b: i32): i32 {
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((b & 0xF8) >> 3)
+}
+
+pub fn color_black(): i32 {
+    return 0x0000
+}
+
+pub fn color_white(): i32 {
+    return 0xFFFF
+}
+
+pub fn color_red(): i32 {
+    return 0xF800
+}
+
+pub fn color_green(): i32 {
+    return 0x07E0
+}
+
+pub fn color_blue(): i32 {
+    return 0x001F
+}
+
+pub fn color_yellow(): i32 {
+    return 0xFFE0
+}
+
+pub fn color_cyan(): i32 {
+    return 0x07FF
+}
+
+pub fn color_magenta(): i32 {
+    return 0xF81F
+}
