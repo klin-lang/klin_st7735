@@ -53,7 +53,7 @@ fn mock_wire(rec: *mut Rec): Wire {
 }
 
 fn test_version() {
-    testing.assert_eq_i32(version(), 2)
+    testing.assert_eq_i32(version(), 3)
 }
 
 fn test_colors() {
@@ -181,4 +181,41 @@ fn test_font_metrics() {
     testing.assert_eq_i32(font5x7_col(32, 0), 0)
     testing.assert(font5x7_col(48, 0) != 0)
     testing.assert(font5x7_col(65, 0) != 0)
+}
+
+fn test_circle_dx() {
+    testing.assert_eq_i32(circle_dx(0, 0), 0)
+    testing.assert_eq_i32(circle_dx(5, 0), 5)
+    testing.assert_eq_i32(circle_dx(5, 5), 0)
+    testing.assert_eq_i32(clamp_radius(20, 10, 100), 5)
+    testing.assert_eq_i32(clamp_radius(8, 8, -1), 0)
+}
+
+fn test_draw_rect_border() {
+    let mut rec = Rec{ cmds: [0, 0, 0, 0, 0, 0, 0, 0], ncmd: 0, data: [0, 0, 0, 0, 0, 0, 0, 0], ndata: 0, last0: 0, last1: 0, delays: 0, rsts: 0 }
+    let lcd = attach(mock_wire(&rec), Tab.black)
+    rec_clear(&rec)
+    lcd.draw_rect(10, 10, 20, 16, color_red())
+    testing.assert(rec.ncmd >= 3)
+    testing.assert_eq_i32(rec.last0, 0xF8)
+    testing.assert_eq_i32(rec.last1, 0x00)
+    rec_clear(&rec)
+    lcd.draw_rect_border(0, 0, 4, 4, 3, color_blue())
+    testing.assert_eq_i32(rec.ncmd, 3)
+    testing.assert_eq_i32(rec.last1, 0x1F)
+}
+
+fn test_fill_round_rect() {
+    let mut rec = Rec{ cmds: [0, 0, 0, 0, 0, 0, 0, 0], ncmd: 0, data: [0, 0, 0, 0, 0, 0, 0, 0], ndata: 0, last0: 0, last1: 0, delays: 0, rsts: 0 }
+    let lcd = attach(mock_wire(&rec), Tab.black)
+    rec_clear(&rec)
+    lcd.fill_round_rect(2, 2, 20, 16, 4, color_green())
+    testing.assert(rec.ncmd >= 3)
+    testing.assert_eq_i32(rec.last0, 0x07)
+    testing.assert_eq_i32(rec.last1, 0xE0)
+    rec_clear(&rec)
+    lcd.draw_round_rect(2, 2, 20, 16, 4, color_white())
+    testing.assert(rec.ncmd >= 3)
+    testing.assert_eq_i32(rec.last0, 0xFF)
+    testing.assert_eq_i32(rec.last1, 0xFF)
 }

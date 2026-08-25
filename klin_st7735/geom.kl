@@ -88,3 +88,40 @@ pub fn clip_rect(x: i32, y: i32, w: i32, h: i32, width: i32, height: i32): Rect 
     }
     return Rect{ x: xx, y: yy, w: ww, h: hh }
 }
+
+/// Clamp a corner radius so `2*r` fits in `w` and `h`. Negative → `0`.
+pub fn clamp_radius(w: i32, h: i32, r: i32): i32 {
+    let mut rr = r
+    if rr < 0 {
+        rr = 0
+    }
+    let mw = w / 2
+    let mh = h / 2
+    if rr > mw {
+        rr = mw
+    }
+    if rr > mh {
+        rr = mh
+    }
+    return rr
+}
+
+/// Largest `dx >= 0` with `dx*dx + dy*dy <= r*r`. Empty circle → `0`.
+pub fn circle_dx(r: i32, dy: i32): i32 {
+    if r <= 0 {
+        return 0
+    }
+    let mut d = dy
+    if d < 0 {
+        d = 0 - d
+    }
+    if d > r {
+        return 0
+    }
+    let lim = r * r
+    let mut dx: i32 = 0
+    while dx * dx + d * d <= lim {
+        dx = dx + 1
+    }
+    return dx - 1
+}
