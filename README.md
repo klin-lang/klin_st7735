@@ -16,12 +16,11 @@ ST7735S modules with an SD slot (e.g. Elektroweb G-176).
 ## Install
 
 ```sh
-klin get github/MrHIDEn/klin_st7735@v0.1.0
+klin get github/klin-lang/klin_st7735@v0.1.0
 ```
 
-Repo: https://github.com/MrHIDEn/klin_st7735  
-Same layout as `klin-lang/*` packages; transfer to the org when you have
-create rights there. Local use: `-I` this tree or a sibling `klin_st7735/`.
+Repo: https://github.com/klin-lang/klin_st7735  
+Local use: `-I` this tree or a sibling `klin_st7735/`.
 
 ## API (`@v0.1.0`)
 
