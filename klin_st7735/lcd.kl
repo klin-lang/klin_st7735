@@ -6,6 +6,10 @@ pub fn cmd_swreset(): i32 {
     return 0x01
 }
 
+pub fn cmd_slpin(): i32 {
+    return 0x10
+}
+
 pub fn cmd_slpout(): i32 {
     return 0x11
 }
@@ -16,6 +20,14 @@ pub fn cmd_noron(): i32 {
 
 pub fn cmd_invoff(): i32 {
     return 0x20
+}
+
+pub fn cmd_invon(): i32 {
+    return 0x21
+}
+
+pub fn cmd_dispoff(): i32 {
+    return 0x28
 }
 
 pub fn cmd_dispon(): i32 {
@@ -230,6 +242,40 @@ pub fn attach(wire: Wire, tab: Tab): Lcd {
     return lcd
 }
 
+/// Adafruit BLACKTAB rotation `0..=3`. Updates width/height and writes MADCTL.
+pub fn (mut lcd: Lcd) set_rotation(rot: i32) {
+    lcd.geom = geom_rotated(Tab.black, rot)
+    let send = lcd.wire.cmd
+    send(lcd.wire.ctx, cmd_madctl())
+    let byte = lcd.wire.data
+    byte(lcd.wire.ctx, lcd.geom.madctl & 255)
+}
+
+pub fn (lcd: Lcd) invert(on: bool) {
+    if on {
+        cmd(lcd, cmd_invon())
+    } else {
+        cmd(lcd, cmd_invoff())
+    }
+}
+
+pub fn (lcd: Lcd) sleep(on: bool) {
+    if on {
+        cmd(lcd, cmd_slpin())
+    } else {
+        cmd(lcd, cmd_slpout())
+        delay_ms(lcd, 120)
+    }
+}
+
+pub fn (lcd: Lcd) display(on: bool) {
+    if on {
+        cmd(lcd, cmd_dispon())
+    } else {
+        cmd(lcd, cmd_dispoff())
+    }
+}
+
 pub fn (lcd: Lcd) set_window(x0: i32, y0: i32, x1: i32, y1: i32) {
     let xs = x0 + lcd.geom.x0
     let xe = x1 + lcd.geom.x0
@@ -288,4 +334,45 @@ pub fn (lcd: Lcd) hline(x: i32, y: i32, w: i32, color: i32) {
 
 pub fn (lcd: Lcd) vline(x: i32, y: i32, h: i32, color: i32) {
     lcd.fill_rect(x, y, 1, h, color)
+}
+
+/// Draw one 5×7 glyph at `(x,y)`. Cell is 6×8 (1 px gap). `ch` = ASCII code.
+pub fn (lcd: Lcd) draw_char(x: i32, y: i32, ch: i32, fg: i32, bg: i32) {
+    let mut col: i32 = 0
+    while col < 5 {
+        let bits = font5x7_col(ch, col)
+        let mut row: i32 = 0
+        while row < 7 {
+            let on = (bits >> row) & 1
+            let color = pick (on != 0) { fg } { bg }
+            lcd.pixel(x + col, y + row, color)
+            row = row + 1
+        }
+        lcd.pixel(x + col, y + 7, bg)
+        col = col + 1
+    }
+    lcd.fill_rect(x + 5, y, 1, 8, bg)
+}
+
+/// Draw ASCII codes from `chars` (`[]i32`). No `str` indexing.
+pub fn (lcd: Lcd) draw_text(x: i32, y: i32, chars: []i32, fg: i32, bg: i32) {
+    lcd.draw_text_n(x, y, chars, chars.len, fg, bg)
+}
+
+/// Like `draw_text`, but only the first `n` codes (clamped to `chars.len`).
+pub fn (lcd: Lcd) draw_text_n(x: i32, y: i32, chars: []i32, n: i32, fg: i32, bg: i32) {
+    let mut lim = n
+    if lim > chars.len {
+        lim = chars.len
+    }
+    if lim < 0 {
+        lim = 0
+    }
+    let mut i: i32 = 0
+    let mut cx = x
+    while i < lim {
+        lcd.draw_char(cx, y, chars[i], fg, bg)
+        cx = cx + font_char_w()
+        i = i + 1
+    }
 }
